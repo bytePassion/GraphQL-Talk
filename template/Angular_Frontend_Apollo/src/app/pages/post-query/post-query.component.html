@@ -21,7 +21,7 @@
     <div class="d-flex flex-row">
       <button style="width: 14rem" class="btn btn-sm btn-primary" [disabled]="selectedAuthorId === undefined"
         (click)="loadPostsForAuthor()">
-        Get Posts For Tag: </button>
+        Get Posts For Author: </button>
       <select [(ngModel)]="selectedAuthorId" class="ml-3 form-control" style="width: 250px;">
         <option *ngFor="let author of authors" [ngValue]="author.id">{{author.name}}</option>
       </select>
