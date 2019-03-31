@@ -1,0 +1,11 @@
+let posts = dataService.getAllPosts();
+
+if (tag) {
+    posts = posts.filter(p => p.tags.find(t => t === tag));
+}
+
+if (authorId) {
+    posts = posts.filter(p => p.authorId === authorId);
+}
+
+return posts;
