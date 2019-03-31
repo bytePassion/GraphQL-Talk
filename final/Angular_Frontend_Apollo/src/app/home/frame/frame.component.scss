@@ -1,0 +1,13 @@
+.not-selectable {
+  user-select: none;
+}
+
+.listItem {
+  padding-left: 24px;
+  padding-right: 24px;
+  cursor: pointer;
+  &:hover {
+    background: rgb(0, 123, 255);
+    color: white;
+  }
+}

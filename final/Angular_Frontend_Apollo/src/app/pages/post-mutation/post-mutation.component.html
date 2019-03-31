@@ -1,0 +1,23 @@
+<div class="h6">Create new Post</div>
+<div class="form-group">
+  <label for="authorSelect">Select Author</label>
+  <select [(ngModel)]="selectedAuthorId" id="authorSelect" class="form-control">
+    <option *ngFor="let author of authors " [ngValue]="author.id">{{author.name}}</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label for="abstractArea">Title:</label>
+  <textarea class="form-control" id="abstractArea" [(ngModel)]="title" rows="4" cols="50"></textarea>
+</div>
+
+<div class="mt-3 form-group">
+  <label for="contentArea">Content:</label>
+  <textarea class="form-control" id="contentArea" [(ngModel)]="content" rows="4" cols="50"></textarea>
+</div>
+
+<div class="btn btn-sm btn-success" (click)="savePost()">Create New Post</div>
+
+<div *ngIf="showMessage" class="alert alert-success mt-3" (click)="hideMessage()">
+  The Blog-Post '{{ createdTitle }}' was successfully created
+</div>
