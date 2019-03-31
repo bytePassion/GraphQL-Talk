@@ -1,106 +1,236 @@
+########################################################
+#######      0. DEMO (SWApi)
+########################################################
+
+
+########################################################
+#######      1. DEMO (halloWorld-Backend)
+########################################################
+
+type Query {
+    hallo: String
+}
+
 yarn add graphql-yoga
 yarn add graphql-import
 
----------------------------------------------
-
-import { GraphQLServer, PubSub } from 'graphql-yoga';
-import { SchemaDirectiveVisitor } from 'graphql-tools';
-import { importSchema } from 'graphql-import'
-import { GraphQLField, GraphQLEnumValue } from 'graphql';
-
-class DeprecatedDirective extends SchemaDirectiveVisitor {
-    public visitFieldDefinition(field: GraphQLField<any, any>) {
-        field.isDeprecated = true;
-        field.deprecationReason = this.args.reason;
-    }
-
-    public visitEnumValue(value: GraphQLEnumValue) {
-        value.isDeprecated = true;
-        value.deprecationReason = this.args.reason;
-    }
-}
-
-interface QueryPostParameter {
-    tag: string;
-    authorId: number;
-}
 
 const resolvers = {
-    Query: {        
-        posts: (parent, { tag, authorId } : QueryPostParameter) => { 
-
-            let result = dataService.getAllPosts();
-
-            if (tag) {
-                result = result.filter(post => post.tags.find(t => t === tag));
-            }
-
-            if (authorId) {
-                result = result.filter(post => post.authorId === authorId);
-            }
-
-            return result; 
-        },               
-        authors: () => dataService.getAllAuthors(),
-    },
-    Mutation: {
-        createPost: (parent, { post }) => {
-            const newPost = dataService.addPost(+post.authorId, post.title, post.content, post.tags);
-            pubsub.publish('POST_ADDED', { postAdded: newPost });
-            return newPost;
-        }
-    },
-    Post: {        
-        author: (parent) => dataService.getAllAuthors().find(author => author.id === parent.authorId)
-    },
-    Author: {
-        posts: author => dataService.getAllPosts().filter(post => post.authorId === author.id)
-    },
-    Subscription: {
-        postAdded: {
-            subscribe: (parent, args, { pubsub }) => {                
-                return pubsub.asyncIterator(['POST_ADDED']);
-            }
-        }
-    }   
-};
-
-const pubsub = new PubSub();
+    Query: {
+        hallo: () => 'hallo world'
+    }
+}
 
 const server = new GraphQLServer({
     typeDefs: importSchema('./src/schema.graphql'),
-    resolvers: resolvers,
-    context: { pubsub },
-    schemaDirectives: {
-        deprecated: DeprecatedDirective
-    }
+    resolvers: resolvers
 });
 
-server.start(({ port }) => console.log(`server is running on localhost:${port}`));
+server.start(options => console.log(`server is running on localhost:${options.port}`));
 
 
----------------------------------------
-
+########################################################
+#######      2. DEMO (posts)
+########################################################
 
 type Query {
-    posts(tag: String, authorId: Int): [Post]               
-    authors: [Author]
+    posts: [Post]
 }
 
 type Post {
-    id: ID!
-    title: String
-    content: String
-    oldContent: String @deprecated(reason: "please use 'content' to retrieve content of post.")
+    id: Int!
+    title: String,
+    content: String,
     author: Author
     tags: [String]
 }
 
 type Author {
-    id: ID!
+    id: Int!
     name: String
     posts: [Post]
 }
+
+
+const resolvers = {
+    Query: {
+        posts: () => dataService.getAllPosts()
+    },
+    Post: {
+        author: (post: Post) => dataService.getAllAuthors().find(author => author.id === post.authorId)
+    },
+    Author: {
+        posts: (author: Author) => dataService.getAllPosts().filter(post => post.authorId === author.id)
+    }
+}
+
+
+########################################################
+#######      3. DEMO (allPosts im Frontend)
+########################################################
+
+ng add apollo-angular
+( https://www.apollographql.com/docs/angular/basics/setup )
+
+const uri = 'http://localhost:4000';
+
+import gql from 'graphql-tag';
+import { Apollo } from 'apollo-angular';
+import { map } from 'rxjs/operators';
+
+private readonly allPostsQuery = gql`
+    query AllBlogPosts {
+      posts {
+        title
+        content
+        id       
+      }
+    }
+  `;
+
+  getPosts(): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.allPostsQuery,
+      fetchPolicy: 'network-only'
+    })
+    .pipe(map(response => response.data.posts));
+  }
+
+
+########################################################
+#######      4. DEMO (allPostsWithAuthors)
+########################################################
+
+private readonly allPostsWithAuthorsQuery = gql`
+  query AllBlogPosts {
+    posts {
+      title
+      content
+      id
+      author {
+        name
+      }
+    }
+  }
+`;
+
+  getPostsWithAuthors(): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.allPostsWithAuthorsQuery,
+      fetchPolicy: 'network-only'
+    })
+    .pipe(map(response => response.data.posts));
+  }
+
+
+########################################################
+#######      5. DEMO (getPostsById and author)
+######################################################## 
+
+--> tags in bestehende queries hinzufügen
+--> Playground -> oops, keine argumente möglich --> schema erweitern
+
+type Query {
+    posts(tag: String, authorId: Int): [Post]
+}
+
+interface PostsArguments {
+    tag: string,
+    authorId: number
+}
+
+posts:  (parent, { tag, authorId } : PostsArguments) => { 
+
+    let posts = dataService.getAllPosts();
+
+    if (tag) {
+        posts = posts.filter(post => post.tags.find(t => t === tag));
+    }
+
+    if (authorId) {
+        posts = posts.filter(post => post.authorId === authorId);
+    }
+
+    return posts; 
+}
+
+Playground: 
+
+query Arguments($tagVar: String) {
+  posts(tag: $tagVar) {
+    title
+    content
+    id
+    tags
+    author {
+      name
+    }
+  }
+}
+
+{
+  "tagVar": "DS9"
+}
+
+Frontend:
+
+private readonly argumentPostQuery = gql`
+    query PostArguments($tagVar: String, $idVar: Int) {
+      posts(tag: $tagVar, authorId: $idVar) {
+        title
+        content
+        id
+        tags
+        author {
+          name
+        }
+      }
+    }
+  `;
+
+  getPostsForTag(tag: string): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.argumentPostQuery,
+      fetchPolicy: 'network-only',
+      variables: {
+        tagVar: tag
+      }
+    })
+    .pipe(map(response => response.data.posts));
+  }
+
+  getPostsForAuthor(authorId: number): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.argumentPostQuery,
+      fetchPolicy: 'network-only',
+      variables: {
+        idVar: +authorId
+      }
+    })
+    .pipe(map(response => response.data.posts));
+  }
+
+
+   private readonly authorsQuery = gql`
+  query Authors {
+  authors {
+    name
+    id
+  }
+}
+  `;
+
+  getAllAuthors(): Observable<Author[]> {
+    return this.apollo.query<AuthorResponse>({
+      query: this.authorsQuery,
+      fetchPolicy: 'network-only'
+    })
+    .pipe(map(response => response.data.authors));
+  }
+
+########################################################
+#######      6. DEMO (mutation)
+######################################################## 
 
 type Mutation {
     createPost(post: PostInput!): Post
@@ -109,10 +239,173 @@ type Mutation {
 input PostInput {
     title: String!
     content: String!
-    authorId: ID!
+    authorId: Int!
     tags: [String]
 }
+
+
+interface CreatePostMutation {
+    post: PostInput;
+}
+interface PostInput {
+    title: string;
+    content: string;
+    authorId: number;
+    tags?: string[];
+}
+
+Mutation: {
+    createPost: (parent, args: CreatePostMutation) => {        
+        const newPost = dataService.addPost(args.post.authorId, 
+                                            args.post.title, 
+                                            args.post.content, 
+                                            args.post.tags);
+                                        
+        return newPost;
+    }
+}
+
+Playground:
+
+mutation AddNewPost($post: PostInput!) {
+  createPost(post: $post) {
+    author {
+      name
+    }
+  }
+}
+
+{
+  "post": {
+    "title": "tiiiiiiitel",
+    "content": "coooooontent",
+    "authorId": 0
+  }
+}
+
+Frontend:
+
+constructor(private readonly apollo: Apollo) {}
+
+  private readonly addPostMutation = gql`
+    mutation AddNewPost($post: PostInput!) {
+    createPost(post: $post) {
+      title
+    }
+  }
+  `;
+
+  createPost(title: string, content: string, authorId: number): Observable<Post> {
+    const newPost = {
+      title: title,
+      content: content,
+      authorId: authorId
+    };
+
+    return this.apollo.mutate<Post>({
+      mutation: this.addPostMutation,
+      variables: {post: newPost}
+    }).pipe(
+      map(response => response.data.createPost)
+    );
+  }
+
+
+########################################################
+#######      7. DEMO (subscription)
+########################################################  
 
 type Subscription {
     postAdded: Post
 }
+
+
+createPost: (parent, args: CreatePostMutation, { pubsub }) => {            
+    const newPost = dataService.addPost(args.post.authorId, 
+                                        args.post.title, 
+                                        args.post.content, 
+                                        args.post.tags);
+    pubsub.publish('POST_ADDED', { postAdded: newPost });              
+    return newPost;
+}
+
+Subscription: {
+    postAdded: {
+        subscribe: (parent, args, { pubsub }) => {                
+            return pubsub.asyncIterator(['POST_ADDED']);
+        }
+    }
+}  
+
+context: { pubsub: new PubSub() }
+
+Playground:
+
+subscription NewPostSubScr {
+  postAdded {
+    title
+    content
+    author {
+      name
+    }
+  }
+}
+
+Frontend:
+
+import { NgModule } from '@angular/core';
+import { ApolloModule, APOLLO_OPTIONS, Apollo } from 'apollo-angular';
+import { HttpLinkModule, HttpLink } from 'apollo-angular-link-http';
+import { InMemoryCache } from 'apollo-cache-inmemory';
+import { WebSocketLink } from 'apollo-link-ws';
+import { split } from 'apollo-link';
+import { getMainDefinition } from 'apollo-utilitie
+
+ const webSocket = new WebSocketLink({
+    uri: `ws://localhost:4000/`,
+    options: {
+      reconnect: true
+    }
+  });
+  const http = httpLink.create({ uri });
+
+  const link = split(
+    ({ query }) => {
+      const { kind, operation } = getMainDefinition(query);
+      return kind === 'OperationDefinition' && operation === 'subscription';
+    },
+    webSocket,
+    http,
+  );
+
+  return {
+    link: link,
+    cache: new InMemoryCache(),
+  };
+
+
+
+constructor(private readonly apollo: Apollo) {}
+
+  private readonly postSubScription = gql`
+    subscription NewPostSubScr {
+    postAdded {
+      title
+      content
+      author {
+        name
+      }
+    }
+  }
+  `;
+
+  postAdded(): Observable<Post> {
+    return this.apollo.subscribe({
+      query: this.postSubScription
+    }).pipe(map(response => response.data['postAdded']));
+  }
+
+########################################################
+#######      8. DEMO (depricated)
+########################################################
+
