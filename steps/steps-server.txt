@@ -1,0 +1,118 @@
+yarn add graphql-yoga
+yarn add graphql-import
+
+---------------------------------------------
+
+import { GraphQLServer, PubSub } from 'graphql-yoga';
+import { SchemaDirectiveVisitor } from 'graphql-tools';
+import { importSchema } from 'graphql-import'
+import { GraphQLField, GraphQLEnumValue } from 'graphql';
+
+class DeprecatedDirective extends SchemaDirectiveVisitor {
+    public visitFieldDefinition(field: GraphQLField<any, any>) {
+        field.isDeprecated = true;
+        field.deprecationReason = this.args.reason;
+    }
+
+    public visitEnumValue(value: GraphQLEnumValue) {
+        value.isDeprecated = true;
+        value.deprecationReason = this.args.reason;
+    }
+}
+
+interface QueryPostParameter {
+    tag: string;
+    authorId: number;
+}
+
+const resolvers = {
+    Query: {        
+        posts: (parent, { tag, authorId } : QueryPostParameter) => { 
+
+            let result = dataService.getAllPosts();
+
+            if (tag) {
+                result = result.filter(post => post.tags.find(t => t === tag));
+            }
+
+            if (authorId) {
+                result = result.filter(post => post.authorId === authorId);
+            }
+
+            return result; 
+        },               
+        authors: () => dataService.getAllAuthors(),
+    },
+    Mutation: {
+        createPost: (parent, { post }) => {
+            const newPost = dataService.addPost(+post.authorId, post.title, post.content, post.tags);
+            pubsub.publish('POST_ADDED', { postAdded: newPost });
+            return newPost;
+        }
+    },
+    Post: {        
+        author: (parent) => dataService.getAllAuthors().find(author => author.id === parent.authorId)
+    },
+    Author: {
+        posts: author => dataService.getAllPosts().filter(post => post.authorId === author.id)
+    },
+    Subscription: {
+        postAdded: {
+            subscribe: (parent, args, { pubsub }) => {                
+                return pubsub.asyncIterator(['POST_ADDED']);
+            }
+        }
+    }   
+};
+
+const pubsub = new PubSub();
+
+const server = new GraphQLServer({
+    typeDefs: importSchema('./src/schema.graphql'),
+    resolvers: resolvers,
+    context: { pubsub },
+    schemaDirectives: {
+        deprecated: DeprecatedDirective
+    }
+});
+
+server.start(({ port }) => console.log(`server is running on localhost:${port}`));
+
+
+---------------------------------------
+
+
+type Query {
+    posts(tag: String, authorId: Int): [Post]               
+    authors: [Author]
+}
+
+type Post {
+    id: ID!
+    title: String
+    content: String
+    oldContent: String @deprecated(reason: "please use 'content' to retrieve content of post.")
+    author: Author
+    tags: [String]
+}
+
+type Author {
+    id: ID!
+    name: String
+    posts: [Post]
+}
+
+type Mutation {
+    createPost(post: PostInput!): Post
+}
+
+input PostInput {
+    title: String!
+    content: String!
+    authorId: ID!
+    tags: [String]
+}
+
+type Subscription {
+    postAdded: Post
+}

@@ -6,10 +6,7 @@
     "start": "nodemon"
   },
   "license": "MIT",
-  "dependencies": {
-    "graphql-import": "^0.7.1",
-    "graphql-yoga": "^1.17.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^10.12.18",
     "nodemon": "^1.18.10",

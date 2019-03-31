@@ -1,0 +1,51 @@
+<div class="h5">Posts: </div>
+
+<div class="d-flex flex-column">
+  <div class="mb-1">
+    <div style="width: 14rem" class="btn btn-sm btn-primary" (click)="loadPosts()">Get All Posts</div>
+  </div>
+  <div class="mb-1">
+    <div style="width: 14rem" class="btn btn-sm btn-primary" (click)="loadPostsWithAuthors()">Get All Posts with Authors
+    </div>
+  </div>
+  <div class="mb-1">
+    <div class="d-flex flex-row">
+      <button style="width: 14rem" class="btn btn-sm btn-primary" [disabled]="searchTag === ''"
+        (click)="loadPostsForTag()">
+        Get Posts For Tag: </button>
+      <input type="text" placeholder="tagname" [(ngModel)]="searchTag" class="ml-3 form-control-sm"
+        style="width: 100px;">
+    </div>
+  </div>
+  <div class="mb-1">
+    <div class="d-flex flex-row">
+      <button style="width: 14rem" class="btn btn-sm btn-primary" [disabled]="selectedAuthorId === undefined"
+        (click)="loadPostsForAuthor()">
+        Get Posts For Tag: </button>
+      <select [(ngModel)]="selectedAuthorId" class="ml-3 form-control" style="width: 250px;">
+        <option *ngFor="let author of authors" [ngValue]="author.id">{{author.name}}</option>
+      </select>
+    </div>
+  </div>
+
+
+
+</div>
+<div *ngIf="posts.length > 0; else noContentTpl" class="list-group mt-4">
+  <div *ngFor="let post of posts" class="list-group-item shadowed my-2">
+    <div class="h5 mb-3">{{post.title}}</div>
+    <div>{{post.content}}</div>
+    <div *ngIf="post.author" class="mt-3">
+      <div class="h6">Author:</div>
+      <div>{{post.author.name}}</div>
+    </div>
+    <div *ngIf="post.tags" class="mt-3">
+      <div class="h6">Tags:</div>
+      <div>{{post.tags.join(', ')}}</div>
+    </div>
+  </div>
+</div>
+
+<ng-template #noContentTpl>
+  <div class="my-3 h5 text-center align-middle">No Posts to Display</div>
+</ng-template>

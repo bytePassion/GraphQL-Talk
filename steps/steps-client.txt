@@ -1,0 +1,233 @@
+npm install --save apollo-angular \
+  apollo-angular-link-http \
+  apollo-link \
+  apollo-client \
+  apollo-cache-inmemory \
+  graphql-tag \
+  graphql
+
+--> ng add apollo-angular
+
+---------------------------------------------
+
+Mutation-Service:
+
+import { Apollo } from 'apollo-angular';
+import gql from 'graphql-tag';
+import { map } from 'rxjs/operators';
+
+constructor(private apollo: Apollo) { }
+
+private readonly createPostMutation = gql`
+    mutation CreatePost($post: PostInput!) {
+      createPost(post: $post) {
+        id,
+        title,
+        content
+      }
+    }
+  `;
+
+  createPost(title: string, content: string, authorId: number): Observable<Post> {
+    const newPost = {
+      title: title,
+      content: content,
+      authorId: authorId
+    };
+
+    return this.apollo.mutate({
+      mutation: this.createPostMutation,
+      variables: {post: newPost}
+    }).pipe(
+      map(response => response.data.createPost)
+    );
+  }
+
+  -----------------------------------------------
+
+  QUERY-Service
+
+import { Apollo } from 'apollo-angular';
+import gql from 'graphql-tag';
+import { map } from 'rxjs/operators';
+
+interface PostResponse {
+  posts: Post[];
+}
+
+interface AuthorResponse {
+  authors: Author[];
+}
+
+constructor(private apollo: Apollo) { }
+
+private readonly postsQuery = gql`
+    query AllPosts {
+      posts {
+        title
+        content
+        tags
+      }
+    }
+  `;
+
+  getPosts(): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.postsQuery,
+      fetchPolicy: 'network-only'
+    }).pipe(map(response => response.data.posts));
+  }
+
+  private readonly gPostsQuery = gql`
+    query Posts($tag: String, $authorId: Int) {
+      posts(tag: $tag, authorId: $authorId) {
+        id
+        title
+        content
+        author {
+          name
+        }
+        tags
+      }
+    }
+    `;
+
+  getPostsForTag(tag: string): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.gPostsQuery,
+      fetchPolicy: 'network-only',
+      variables: { tag: tag }
+    }).pipe(map(response => response.data.posts));
+  }
+
+  getPostsForAuthor(authorId: number): Observable<Post[]> {
+    console.log(authorId);
+    return this.apollo.query<PostResponse>({
+      query: this.gPostsQuery,
+      fetchPolicy: 'network-only',
+      variables: { authorId: +authorId }
+    }).pipe(map(response => response.data.posts));
+  }
+
+  private readonly postsWithAuthorsQuery = gql`
+    query AllPostsWithAuthors {
+      posts {
+        title
+        content
+        author {
+          name
+        }
+        tags
+      }
+    }
+  `;
+
+  getPostsWithAuthors(): Observable<Post[]> {
+    return this.apollo.query<PostResponse>({
+      query: this.postsWithAuthorsQuery,
+      fetchPolicy: 'network-only'
+    })
+    .pipe(
+        map(response => response.data.posts)
+      );
+  }
+
+  private readonly authorsQuery = gql`
+  {
+    authors {
+      id,
+      name
+    }
+  }
+  `;
+
+  getAllAuthors(): Observable<Author[]> {
+    return this.apollo.query<AuthorResponse>({
+      query: this.authorsQuery,
+      fetchPolicy: 'network-only'
+    })
+    .pipe(
+      map(response => response.data.authors)
+    );
+  }
+
+  ------------------------
+
+  subscription:
+
+import gql from 'graphql-tag';
+import { Apollo } from 'apollo-angular';
+import { map } from 'rxjs/operators';
+
+ constructor(private apollo: Apollo) { }
+
+  private readonly postAddedSubscription = gql`
+  subscription postAdded{
+    postAdded{
+      id
+      content,
+      title
+      tags
+    }
+  }
+  `;
+
+  postAdded() {
+    return this.apollo.subscribe({
+      query: this.postAddedSubscription
+    }).pipe(map(response => response.data['postAdded']));
+  }
+
+-------------------------------
+
+graphql.module.ts
+
+import { NgModule } from '@angular/core';
+import { ApolloModule, APOLLO_OPTIONS, Apollo } from 'apollo-angular';
+import { HttpLinkModule, HttpLink } from 'apollo-angular-link-http';
+import { InMemoryCache } from 'apollo-cache-inmemory';
+import { WebSocketLink } from 'apollo-link-ws';
+import { split } from 'apollo-link';
+import { getMainDefinition } from 'apollo-utilities';
+
+
+
+@NgModule({
+  exports: [ApolloModule, HttpLinkModule],
+})
+export class GraphQLModule {
+  constructor(httpLink: HttpLink, apollo: Apollo) {
+    const uri = 'http://localhost:4000';
+    const webSocket = new WebSocketLink({
+      uri: `ws://localhost:4000/`,
+      options: {
+        reconnect: true
+      }
+    });
+    const http = httpLink.create({ uri });
+
+    const link = split(
+      ({ query }) => {
+        const { kind, operation } = getMainDefinition(query);
+        return kind === 'OperationDefinition' && operation === 'subscription';
+      },
+      webSocket,
+      http,
+    );
+
+    apollo.create({
+      link: link,
+      cache: new InMemoryCache(),
+    });
+  }
+}
+
+-----------------------------------------
+
+app.module.ts
+
+import { GraphQLModule } from './graphql.module';
+
+GraphQLModule
+
+----------------------------------------

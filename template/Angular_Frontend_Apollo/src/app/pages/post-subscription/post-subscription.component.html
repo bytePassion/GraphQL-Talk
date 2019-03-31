@@ -1,0 +1,18 @@
+<div *ngIf="newPosts.length > 0; else noContentTpl" class="list-group mt-4">
+  <div *ngFor="let post of newPosts" class="list-group-item shadowed my-2">
+    <div class="h5 mb-3">{{post.title}}</div>
+    <div>{{post.content}}</div>
+    <div *ngIf="post.author" class="mt-3">
+      <div class="h6">Author:</div>
+      <div>{{post.author.name}}</div>
+    </div>
+    <div *ngIf="post.tags" class="mt-3">
+      <div class="h6">Tags:</div>
+      <div>{{post.tags.join(', ')}}</div>
+    </div>
+  </div>
+</div>
+
+<ng-template #noContentTpl>
+  <div class="my-3 h5 text-center align-middle">No new Posts to Display</div>
+</ng-template>
