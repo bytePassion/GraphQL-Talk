@@ -12,7 +12,6 @@ export class DataGenerator {
                 authorId: this.getRandomItem(authors).id,
                 title: this.getRandomAbstract(index),
                 content: content,
-                oldContent: content,
                 id: index,
                 tags: this.getRandomTags()
             })

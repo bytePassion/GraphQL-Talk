@@ -21,7 +21,6 @@ export class DataService {
             id: this.posts.length,
             title: title,
             content: content,
-            oldContent: content,
             tags: tags ? tags : [],
             authorId: authorId
         }

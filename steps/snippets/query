@@ -1,125 +1,21 @@
-import { Injectable } from '@angular/core';
-import { Post } from '../../models/post';
-import { Observable, of } from 'rxjs';
-import { Author } from 'src/app/models/author';
-import { Apollo } from 'apollo-angular';
-import gql from 'graphql-tag';
-import { map} from 'rxjs/operators';
-
 interface PostResponse {
   posts: Post[];
 }
 
-interface AuthorsResponse {
-  authors: Author[];
-}
-
-@Injectable({
-  providedIn: 'root',
-})
-export class QueryService {
-
-  private readonly exampleAuthor: Author = {
-    id: 1,
-    name: 'exampleAuthor'
-  };
-
-  private readonly examplePost: Post = {
-    id: 2,
-    title: 'title',
-    content: 'content',
-    author: this.exampleAuthor,
-    tags: ['tag']
-  };
-
-  constructor(private readonly apollo: Apollo) {}
-
-  private readonly allPostsQuery = gql`
-    query AllPosts {
-      posts {
-        title
-        content
-        id
-        tags
-      }
-    }
-  `;
-
-  getPosts(): Observable<Post[]> {
-    return this.apollo.query<PostResponse>({
-      query: this.allPostsQuery,
-      fetchPolicy: 'network-only'
-    }).pipe(map(response => response.data.posts));
-  }
-
-  private readonly postsWithArguments = gql`
-  query allPostsWithArguments($tagVar: String, $idVar: Int) {
-    posts(tag: $tagVar, authorId: $idVar) {
+private readonly allPostsQuery = gql`
+  query AllPosts {
+    posts {
       title
       content
       id
       tags
-      author {
-        name
-      }
     }
   }
 `;
 
-  getPostsForTag(tag: string): Observable<Post[]> {
-    return this.apollo.query<PostResponse>({
-      query: this.postsWithArguments,
-      fetchPolicy: 'network-only',
-      variables: {
-        tagVar: tag
-      }
-    }).pipe(map(response => response.data.posts));
-  }
-
-  getPostsForAuthor(authorId: number): Observable<Post[]> {
-    return this.apollo.query<PostResponse>({
-      query: this.postsWithArguments,
-      fetchPolicy: 'network-only',
-      variables: {
-        idVar: authorId
-      }
-    }).pipe(map(response => response.data.posts));
-  }
-
-  private readonly postsWithAuthorsQuery = gql`
-    query allPostsWithAuthorsQuery {
-      posts {
-        title
-        content
-        id
-        tags
-        author {
-          name
-        }
-      }
-    }
-  `;
-
-  getPostsWithAuthors(): Observable<Post[]> {
-    return this.apollo.query<PostResponse>({
-      query: this.postsWithAuthorsQuery,
-      fetchPolicy: 'network-only'
-    }).pipe(map(response => response.data.posts));
-  }
-
-  private readonly authorsQuery = gql`
-    query allAuthors {
-    authors {
-      name,
-      id
-    }
-  }
-  `;
-
-  getAllAuthors(): Observable<Author[]> {
-    return this.apollo.query<AuthorsResponse>({
-      query: this.authorsQuery,
-      fetchPolicy: 'network-only'
-    }).pipe(map(response => response.data.authors));
-  }
+getPosts(): Observable<Post[]> {
+  return this.apollo.query<PostResponse>({
+    query: this.allPostsQuery,
+    fetchPolicy: 'network-only'
+  }).pipe(map(response => response.data.posts));
 }

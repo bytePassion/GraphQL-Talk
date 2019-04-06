@@ -362,7 +362,7 @@ import { split } from 'apollo-link';
 import { getMainDefinition } from 'apollo-utilitie
 
  const webSocket = new WebSocketLink({
-    uri: `ws://localhost:4000/`,
+    uri: `http://localhost:4000/`,
     options: {
       reconnect: true
     }

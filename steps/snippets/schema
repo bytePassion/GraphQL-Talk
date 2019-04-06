@@ -1,0 +1,33 @@
+type Query {
+    posts(tag: String, authorId: Int): [Post]               
+    authors: [Author]
+}
+
+type Post {
+    id: ID!
+    title: String
+    content: String    
+    author: Author
+    tags: [String]
+}
+
+type Author {
+    id: ID!
+    name: String
+    posts: [Post]
+}
+
+type Mutation {
+    createPost(post: PostInput!): Post
+}
+
+input PostInput {
+    title: String!
+    content: String!
+    authorId: ID!
+    tags: [String]
+}
+
+type Subscription {
+    postAdded: Post
+}
